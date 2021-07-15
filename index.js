@@ -1,10 +1,10 @@
 
-let searchBar = document.getElementById('searchBar');
+const searchBar = document.getElementById('searchBar');
+const url = 'https://jsonplaceholder.typicode.com/posts';
 
 window.addEventListener('DOMContentLoaded',getPosts);
 
 function getPosts(){
-	let url = 'https://jsonplaceholder.typicode.com/posts'
 	fetch(url).then((response)=>response.json())
 	.then((posts)=>{
 		for(let post = 0;post<posts.length;post++){
@@ -17,12 +17,11 @@ function getPosts(){
 
 function addPosts(post) {
 	let dynamicTable = document.getElementById('dynamicTable');
-  let newRow = dynamicTable.insertRow();
+	let tableBody = dynamicTable.querySelector('#myTableBody');
+  let newRow = tableBody.insertRow();
   let newCell1 = newRow.insertCell(0);
   let newCell2 = newRow.insertCell(1);
   let newCell3 = newRow.insertCell(2);
-  let newCell4 = newRow.insertCell(3);
-  let newCell5 = newRow.insertCell(4);
   let detailsBtn = document.createElement("BUTTON");
   let deletBtn = document.createElement("BUTTON");
   let updateBtn = document.createElement("BUTTON");
@@ -37,7 +36,7 @@ function addPosts(post) {
   updateBtn.setAttribute('class','btn btn-warning btn-sm');
   updateBtn.setAttribute('data-toggle','modal');
   updateBtn.setAttribute('data-target','#editViewModal');
-  updateBtn.setAttribute('data-id',post.id);
+  newRow.setAttribute('data-post',JSON.stringify(post));
 
   detailsBtn.appendChild(txtDetails);
   detailsBtn.addEventListener('click',function(){detailsViewModal()});
@@ -47,39 +46,34 @@ function addPosts(post) {
   updateBtn.addEventListener('click',function(){editModalView()});
 
   newCell1.innerHTML = post.id;
-  newCell2.innerHTML = post.userId;
-  newCell3.innerHTML = post.title;
-  newCell4.innerHTML = post.body;
-  newCell5.appendChild(detailsBtn);
-  newCell5.appendChild(updateBtn);
-  newCell5.appendChild(deletBtn);
+  newCell2.innerHTML = post.title;
+  newCell3.appendChild(detailsBtn);
+  newCell3.appendChild(updateBtn);
+  newCell3.appendChild(deletBtn);
 
   newCell1.setAttribute('id','postId');
-  newCell2.setAttribute('id','userId');
-  newCell3.setAttribute('id','postTitle');
-  newCell4.setAttribute('id','postBody');
-  newCell5.setAttribute('class','buttonsGroup');
+  newCell2.setAttribute('id','postTitle');
+  newCell3.setAttribute('class','buttonsGroup');
 
 };
 
 
-function deletAlert(id){
+function deletAlert(postId){
 	if(confirm('Are you sure you want to delete?')){
-		deletPost(id);
+		deletPost(postId);
 	}
 };
 
-function deletPost(id){
+function deletPost(postId){
 	try{
-		let url = 'https://jsonplaceholder.typicode.com/posts/'+id;
-		fetch(url, {
+		fetch(`${url}/${postId}`, {
   		method: 'DELETE',
-});
+		});
     let td = event.target.parentNode; 
     let tr = td.parentNode; // the row to be removed
     tr.parentNode.removeChild(tr);
 	}catch(err){
-		alert(err);
+		alert(`${err.name} occurs ! Please Try Again`);
 	}
 
 };
@@ -104,7 +98,7 @@ function addNewPost(evt){
 
 	addNewPostFromVar.style.display = 'none';
 
-	fetch('https://jsonplaceholder.typicode.com/posts', {
+	fetch(url, {
 	  method: 'POST',
 	  body: JSON.stringify({
 	    title: postTitle,
@@ -126,6 +120,7 @@ function addNewPost(evt){
 function detailsViewModal(){
 	let detailsBtn =  event.target;
 	let tableRow = detailsBtn.parentNode.parentNode;
+	let postObj = JSON.parse(tableRow.dataset.post);
 	let detailsViewModal = document.getElementById('DetailsViewModal');
 	let modalbodyTitle = detailsViewModal.querySelector('.card-title');
 	let modalbodyPostId = detailsViewModal.querySelector('.postId');
@@ -133,8 +128,8 @@ function detailsViewModal(){
 	let modalbodyDetails = detailsViewModal.querySelector('.card-text');
 	let postTitle = tableRow.querySelector('#postTitle').innerHTML;
 	let postId = tableRow.querySelector('#postId').innerHTML;
-	let userId = tableRow.querySelector('#userId').innerHTML;
-	let postBody = tableRow.querySelector('#postBody').innerHTML;
+	let userId = postObj.userId;
+	let postBody = postObj.body;
 
 	modalbodyTitle.innerHTML = postTitle;
 	modalbodyPostId.innerHTML = postId;
@@ -148,18 +143,17 @@ function detailsViewModal(){
 function editModalView(){
 	let editButton = event.target;
 	let tableRow = editButton.parentNode.parentNode;
+	let postObj = JSON.parse(tableRow.dataset.post);
 	let editViewModal = document.getElementById('editViewModal');
 	let postTitleEdit = editViewModal.querySelector('#postTitleEdit');
 	let postDetailsEdit = editViewModal.querySelector('#postDetailsEdit');
 	let saveUpdateButton = editViewModal.querySelector('#saveUpdateButton');
-	let userId = tableRow.querySelector('#userId').innerHTML;
+	let userId = postObj.userId;
 	let postId = tableRow.querySelector('#postId').innerHTML;
 	let postTitle = tableRow.querySelector('#postTitle').innerHTML;
-	let postDetails = tableRow.querySelector('#postBody').innerHTML;
-
-
+	let postDetails = postObj.body;
 	let tablePostTitle = tableRow.querySelector('#postTitle');
-	let tablePostDetails = tableRow.querySelector('#postBody');
+	//let tablePostDetails = tableRow.querySelector('#postBody');
 
 	postTitleEdit.value = postTitle;
 	postDetailsEdit.value = postDetails;
@@ -168,10 +162,9 @@ function editModalView(){
 
 		let newPostTitle = postTitleEdit.value;
 		let newpostDetails = postDetailsEdit.value;
-		let url = `https://jsonplaceholder.typicode.com/posts/${postId}`;
 
 		editViewModal.querySelector('.close').click();
-		fetch(url, {
+		fetch(`${url}/${postId}`, {
 		  method: 'PUT',
 		  body: JSON.stringify({
 		    id: postId,
@@ -185,8 +178,8 @@ function editModalView(){
 		}).then((response) =>
 			response.json())
 		.then((post) => {
+				tableRow.dataset.post = JSON.stringify(post);
 		  	tablePostTitle.innerHTML = post.title;
-		  	tablePostDetails.innerHTML = post.body;
 		  	alert('Successfully Updated');
 		  })
 		.catch((err)=>
@@ -210,7 +203,6 @@ const reduceFetch = (func,delay)=>{
 };
 
 function dataFetch(field,args) {
-	let url = 'https://jsonplaceholder.typicode.com/posts';
 	let dynamicTable = document.getElementById('dynamicTable');
 	let rowCount = dynamicTable.rows.length;
 
@@ -227,21 +219,21 @@ function dataFetch(field,args) {
     	}
    	}else{
 
-	  for(let post = 0; post < posts.length; post++){
+			for(let post = 0; post < posts.length; post++){
 
-	    let postTitle = posts[post].title;
-	    let postTitleSmaller = (String(postTitle)).toLowerCase();
-	    let searchBarSmaller = (String(searchBar.value)).toLowerCase();
-	    let postDetails = posts[post].body;
-	    let postDetailsSmaller = (String(postDetails)).toLowerCase();
+				let postTitle = posts[post].title;
+				let postTitleSmaller = (String(postTitle)).toLowerCase();
+				let searchBarSmaller = (String(searchBar.value)).toLowerCase();
+				let postDetails = posts[post].body;
+				let postDetailsSmaller = (String(postDetails)).toLowerCase();
 
-	if((postTitleSmaller.indexOf(searchBarSmaller) >-1)||(postDetailsSmaller.indexOf(searchBarSmaller) >-1) ){
-			addPosts(posts[post]);
-		}
-	    }
+				if((postTitleSmaller.indexOf(searchBarSmaller) >-1)||(postDetailsSmaller.indexOf(searchBarSmaller) >-1) ){
+						addPosts(posts[post]);
+				}
+			}
 	}
-    })
-    .catch((err)=>{alert(`${err.name} occurs! Check your internet connection`)})
+	})
+	.catch((err)=>{alert(`${err.name} occurs! Check your internet connection`)})
 };
 
 searchBar.addEventListener('keyup',reduceFetch(dataFetch,300));
